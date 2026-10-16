@@ -14,11 +14,13 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import CONCENTRATION_MICROGRAMS_PER_CUBIC_METER, PERCENTAGE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HomeWizardClimateConfigEntry
+from .connection import HomeWizardClimateConnection
 from .const import PURIFIER_AIR_QUALITY, TYPE_PURIFIER
-from .entity import HomeWizardClimateEntity
+from .entity import HomeWizardClimateEntity, async_setup_device_entities
 
 
 def _number(key: str) -> Callable[[dict[str, Any]], float | None]:
@@ -83,23 +85,28 @@ SENSORS: tuple[HomeWizardSensorDescription, ...] = (
     ),
 )
 
+# Push entities: Home Assistant does not need to throttle their commands.
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: HomeWizardClimateConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant, entry: HomeWizardClimateConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
 ) -> None:
     connection = entry.runtime_data.connection
-    async_add_entities(
-        HomeWizardSensor(connection, ident, description)
-        for ident, dev in connection.devices.items()
-        for description in SENSORS
-        if dev.device.type in description.types
-    )
+
+    def build(ident: str) -> list[Entity]:
+        kind = connection.devices[ident].device.type
+        return [HomeWizardSensor(connection, ident, d) for d in SENSORS if kind in d.types]
+
+    async_setup_device_entities(hass, entry, async_add_entities, build)
 
 
 class HomeWizardSensor(HomeWizardClimateEntity, SensorEntity):
     entity_description: HomeWizardSensorDescription
 
-    def __init__(self, connection, identifier: str, description: HomeWizardSensorDescription) -> None:
+    def __init__(
+        self, connection: HomeWizardClimateConnection, identifier: str, description: HomeWizardSensorDescription
+    ) -> None:
         super().__init__(connection, identifier)
         self.entity_description = description
         self._attr_unique_id = f"{identifier}_{description.key}"

@@ -7,6 +7,10 @@
         "data": {
           "username": "Email",
           "password": "Password"
+        },
+        "data_description": {
+          "username": "The email you use to sign in to the HomeWizard Climate app.",
+          "password": "The password of that account. It is stored in Home Assistant to sign in again when the cloud asks."
         }
       },
       "reauth_confirm": {
@@ -14,6 +18,19 @@
         "description": "HomeWizard no longer accepts the password of {username}. Type the one you use in the app now.",
         "data": {
           "password": "Password"
+        },
+        "data_description": {
+          "password": "The password of that account. It is stored in Home Assistant to sign in again when the cloud asks."
+        }
+      },
+      "reconfigure": {
+        "title": "Change the password",
+        "description": "The password of {username} in the HomeWizard Climate app.",
+        "data": {
+          "password": "Password"
+        },
+        "data_description": {
+          "password": "The password of that account. It is stored in Home Assistant to sign in again when the cloud asks."
         }
       }
     },
@@ -24,7 +41,8 @@
     },
     "abort": {
       "already_configured": "This account is already added.",
-      "reauth_successful": "Signed in again."
+      "reauth_successful": "Signed in again.",
+      "reconfigure_successful": "Password changed."
     }
   },
   "exceptions": {

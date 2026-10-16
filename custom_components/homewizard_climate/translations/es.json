@@ -7,6 +7,10 @@
         "data": {
           "username": "Correo",
           "password": "Contraseña"
+        },
+        "data_description": {
+          "username": "El correo con el que entras en la app HomeWizard Climate.",
+          "password": "La contraseña de esa cuenta. Se guarda en Home Assistant para volver a entrar cuando la nube lo pida."
         }
       },
       "reauth_confirm": {
@@ -14,6 +18,19 @@
         "description": "HomeWizard ya no acepta la contraseña de {username}. Escribe la que usas ahora en la app.",
         "data": {
           "password": "Contraseña"
+        },
+        "data_description": {
+          "password": "La contraseña de esa cuenta. Se guarda en Home Assistant para volver a entrar cuando la nube lo pida."
+        }
+      },
+      "reconfigure": {
+        "title": "Cambiar la contraseña",
+        "description": "La contraseña de {username} en la app HomeWizard Climate.",
+        "data": {
+          "password": "Contraseña"
+        },
+        "data_description": {
+          "password": "La contraseña de esa cuenta. Se guarda en Home Assistant para volver a entrar cuando la nube lo pida."
         }
       }
     },
@@ -24,7 +41,8 @@
     },
     "abort": {
       "already_configured": "Esta cuenta ya está añadida.",
-      "reauth_successful": "Has vuelto a entrar."
+      "reauth_successful": "Has vuelto a entrar.",
+      "reconfigure_successful": "Contraseña cambiada."
     }
   },
   "exceptions": {

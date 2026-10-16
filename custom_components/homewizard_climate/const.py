@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Final
 
 DOMAIN: Final = "homewizard_climate"
@@ -72,3 +73,7 @@ def legacy_unique_id(device_type: str, identifier: str) -> str:
     and are migrated from it.
     """
     return f"HomeWizardClimateDeviceType.{device_type.upper()}_{identifier}"
+
+
+# How often the device list is fetched again, to pick up devices added or removed in the app.
+DEVICE_REFRESH_INTERVAL: Final = timedelta(minutes=30)

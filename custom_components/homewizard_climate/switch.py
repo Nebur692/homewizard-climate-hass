@@ -7,31 +7,38 @@ from typing import Any
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HomeWizardClimateConfigEntry
+from .connection import HomeWizardClimateConnection
 from .const import TYPE_DEHUMIDIFIER, TYPE_HEATER, TYPE_PURIFIER
-from .entity import HomeWizardClimateEntity
+from .entity import HomeWizardClimateEntity, async_setup_device_entities
 
 CHILD_LOCK_TYPES = frozenset({TYPE_HEATER, TYPE_DEHUMIDIFIER, TYPE_PURIFIER})
 CHILD_LOCK = SwitchEntityDescription(key="lock", translation_key="child_lock", entity_category=EntityCategory.CONFIG)
 
+# Push entities: Home Assistant does not need to throttle their commands.
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: HomeWizardClimateConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant, entry: HomeWizardClimateConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
 ) -> None:
     connection = entry.runtime_data.connection
-    async_add_entities(
-        HomeWizardChildLock(connection, ident)
-        for ident, dev in connection.devices.items()
-        if dev.device.type in CHILD_LOCK_TYPES
-    )
+
+    def build(ident: str) -> list[Entity]:
+        if connection.devices[ident].device.type in CHILD_LOCK_TYPES:
+            return [HomeWizardChildLock(connection, ident)]
+        return []
+
+    async_setup_device_entities(hass, entry, async_add_entities, build)
 
 
 class HomeWizardChildLock(HomeWizardClimateEntity, SwitchEntity):
     entity_description = CHILD_LOCK
 
-    def __init__(self, connection, identifier: str) -> None:
+    def __init__(self, connection: HomeWizardClimateConnection, identifier: str) -> None:
         super().__init__(connection, identifier)
         self._attr_unique_id = f"{identifier}_lock"
 

@@ -11,10 +11,12 @@ entity: a Repairs issue lists them until they are changed.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from collections.abc import Mapping
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.const import EVENT_CALL_SERVICE
-from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import async_call_later
@@ -84,27 +86,47 @@ def async_migrate_fans(hass: HomeAssistant, entry: HomeWizardClimateConfigEntry)
 @callback
 def async_track_old_references(hass: HomeAssistant, entry: HomeWizardClimateConfigEntry) -> None:
     """Raise or clear the Repairs issue now, and again when automations or scripts reload."""
+    # One pending delayed check at a time, so a burst of reloads does not pile up timers.
+    pending: list[CALLBACK_TYPE] = []
 
     @callback
     def check(_event: Event | None = None) -> None:
         async_check_old_references(hass, entry)
 
     @callback
-    def is_script_reload(event_data) -> bool:
+    def check_later(delay: float) -> None:
+        while pending:
+            pending.pop()()
+
+        @callback
+        def run(_now: datetime) -> None:
+            pending.clear()
+            check()
+
+        pending.append(async_call_later(hass, delay, run))
+
+    @callback
+    def is_script_reload(event_data: Mapping[str, Any]) -> bool:
         return event_data.get("domain") == "script" and event_data.get("service") == "reload"
 
     @callback
     def check_after_script_reload(_event: Event) -> None:
         # Scripts fire no event when they finish reloading: look a few seconds after the call.
-        entry.async_on_unload(async_call_later(hass, SCRIPT_RELOAD_DELAY, check))
+        check_later(SCRIPT_RELOAD_DELAY)
 
     @callback
     def check_at_start(_hass: HomeAssistant) -> None:
         check()
         # On a real restart the automations are not always ready to be asked when
         # Home Assistant says it has started (seen on 2026.10.1): look again later.
-        entry.async_on_unload(async_call_later(hass, STARTUP_RECHECK_DELAY, check))
+        check_later(STARTUP_RECHECK_DELAY)
 
+    @callback
+    def cancel_pending() -> None:
+        while pending:
+            pending.pop()()
+
+    entry.async_on_unload(cancel_pending)
     entry.async_on_unload(async_at_started(hass, check_at_start))
     entry.async_on_unload(hass.bus.async_listen(EVENT_AUTOMATION_RELOADED, check))
     entry.async_on_unload(

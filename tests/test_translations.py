@@ -33,7 +33,7 @@ STRINGS = _leaves(_load("strings.json"))
 def test_same_keys_in_both_languages_and_in_strings_json() -> None:
     assert set(EN) == set(ES)
     assert set(EN) == set(STRINGS)
-    assert len(EN) == 46, len(EN)
+    assert len(EN) == 54, len(EN)
 
 
 def test_same_placeholders_in_both_languages() -> None:

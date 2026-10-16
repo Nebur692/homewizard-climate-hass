@@ -12,11 +12,13 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HomeWizardClimateConfigEntry
+from .connection import HomeWizardClimateConnection
 from .const import TYPE_DEHUMIDIFIER, TYPE_PURIFIER
-from .entity import HomeWizardClimateEntity
+from .entity import HomeWizardClimateEntity, async_setup_device_entities
 
 
 def _flag(key: str) -> Callable[[dict[str, Any]], bool | None]:
@@ -61,23 +63,28 @@ BINARY_SENSORS: tuple[HomeWizardBinarySensorDescription, ...] = (
     ),
 )
 
+# Push entities: Home Assistant does not need to throttle their commands.
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: HomeWizardClimateConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant, entry: HomeWizardClimateConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
 ) -> None:
     connection = entry.runtime_data.connection
-    async_add_entities(
-        HomeWizardBinarySensor(connection, ident, description)
-        for ident, dev in connection.devices.items()
-        for description in BINARY_SENSORS
-        if dev.device.type in description.types
-    )
+
+    def build(ident: str) -> list[Entity]:
+        kind = connection.devices[ident].device.type
+        return [HomeWizardBinarySensor(connection, ident, d) for d in BINARY_SENSORS if kind in d.types]
+
+    async_setup_device_entities(hass, entry, async_add_entities, build)
 
 
 class HomeWizardBinarySensor(HomeWizardClimateEntity, BinarySensorEntity):
     entity_description: HomeWizardBinarySensorDescription
 
-    def __init__(self, connection, identifier: str, description: HomeWizardBinarySensorDescription) -> None:
+    def __init__(
+        self, connection: HomeWizardClimateConnection, identifier: str, description: HomeWizardBinarySensorDescription
+    ) -> None:
         super().__init__(connection, identifier)
         self.entity_description = description
         self._attr_unique_id = f"{identifier}_{description.key}"

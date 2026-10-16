@@ -1,0 +1,48 @@
+{
+  "entity": {
+    "fan": {
+      "fan": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {"normal": "mdi:fan", "sleep": "mdi:power-sleep", "natural": "mdi:leaf"}
+          }
+        }
+      },
+      "purifier": {
+        "default": "mdi:air-purifier",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {"manual": "mdi:tune", "auto": "mdi:fan-auto", "sleep": "mdi:power-sleep"}
+          }
+        }
+      }
+    },
+    "climate": {
+      "aircooler": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {"manual": "mdi:tune", "sleep": "mdi:power-sleep", "natural": "mdi:leaf"}
+          }
+        }
+      },
+      "airconditioner": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {"none": "mdi:snowflake", "sleep": "mdi:power-sleep", "silent": "mdi:volume-off"}
+          }
+        }
+      }
+    },
+    "sensor": {
+      "air_quality": {"default": "mdi:air-filter"},
+      "filter_life_remaining": {"default": "mdi:air-filter"}
+    },
+    "binary_sensor": {
+      "tank_full": {"default": "mdi:cup-water", "state": {"on": "mdi:water-alert"}},
+      "defrosting": {"default": "mdi:snowflake-melt"}
+    },
+    "switch": {
+      "child_lock": {"default": "mdi:lock-open-variant", "state": {"on": "mdi:lock"}}
+    }
+  }
+}

@@ -118,6 +118,9 @@ class FakeCloud:
     rest_delay: float = 0  # seconds before answering REST
     ws_reject_token: bool = False
     answer_pings: bool = True  # False: a half-dead link that never answers a ping
+    hello_status: int = 200  # what an accepted hello is answered with (e.g. 503 when the cloud is busy)
+    close_on_connect: bool = False  # accept the socket and close it at once, before any answer
+    connections: int = 0
     received: list[dict[str, Any]] = field(default_factory=list)
     hellos: int = 0
     logins: int = 0
@@ -194,6 +197,10 @@ class FakeCloud:
     async def _ws(self, request: web.Request) -> web.WebSocketResponse:
         ws = web.WebSocketResponse(autoping=self.answer_pings)
         await ws.prepare(request)
+        self.connections += 1
+        if self.close_on_connect:
+            await ws.close()
+            return ws
         self._sockets.append(ws)
         subs = self._subs.setdefault(id(ws), set())
         authed = False
@@ -206,7 +213,9 @@ class FakeCloud:
             if kind == "hello":
                 self.hellos += 1
                 ok = data.get("token") == TOKEN and not self.ws_reject_token
-                await ws.send_json({"type": "response", "message_id": "hello", "status": 200 if ok else 401})
+                status = self.hello_status if ok else 401
+                await ws.send_json({"type": "response", "message_id": "hello", "status": status})
+                ok = ok and status == 200
                 authed = ok
             elif not authed:
                 await ws.send_json({"type": "response", "message_id": data.get("message_id"), "status": 401})

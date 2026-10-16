@@ -13,6 +13,7 @@ import asyncio
 from typing import Any
 
 from homeassistant.components.climate import (
+    ATTR_HVAC_MODE,
     FAN_HIGH,
     FAN_LOW,
     FAN_MEDIUM,
@@ -29,9 +30,11 @@ from homeassistant.components.climate import (
 )
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HomeWizardClimateConfigEntry
+from .connection import HomeWizardClimateConnection
 from .const import (
     AIRCO_MAX_TEMP,
     AIRCO_MIN_TEMP,
@@ -47,7 +50,7 @@ from .const import (
     TYPE_INFRAREDHEATER,
     legacy_unique_id,
 )
-from .entity import HomeWizardClimateEntity
+from .entity import HomeWizardClimateEntity, async_setup_device_entities
 
 # Seconds between power on and a mode change: the device ignores one sent straight after.
 MODE_CHANGE_DELAY = 1
@@ -64,21 +67,26 @@ _FAN_TO_SPEED = {
 _AIRCO_MODES = {"cool": HVACMode.COOL, "dehumidify": HVACMode.DRY, "fan": HVACMode.FAN_ONLY, "heat": HVACMode.HEAT}
 _AIRCO_PRESET_SILENT = "silent"
 
+# Push entities: Home Assistant does not need to throttle their commands.
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: HomeWizardClimateConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant, entry: HomeWizardClimateConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
 ) -> None:
     connection = entry.runtime_data.connection
-    entities: list[ClimateEntity] = []
-    for ident, dev in connection.devices.items():
-        kind = dev.device.type
+
+    def build(ident: str) -> list[Entity]:
+        kind = connection.devices[ident].device.type
         if kind == TYPE_AIRCONDITIONER:
-            entities.append(HomeWizardAirConditioner(connection, ident))
-        elif kind == TYPE_AIRCOOLER:
-            entities.append(HomeWizardAirCooler(connection, ident))
-        elif kind in (TYPE_HEATERFAN, TYPE_INFRAREDHEATER, TYPE_HEATER, TYPE_DEHUMIDIFIER):
-            entities.append(HomeWizardClimate(connection, ident))
-    async_add_entities(entities)
+            return [HomeWizardAirConditioner(connection, ident)]
+        if kind == TYPE_AIRCOOLER:
+            return [HomeWizardAirCooler(connection, ident)]
+        if kind in (TYPE_HEATERFAN, TYPE_INFRAREDHEATER, TYPE_HEATER, TYPE_DEHUMIDIFIER):
+            return [HomeWizardClimate(connection, ident)]
+        return []
+
+    async_setup_device_entities(hass, entry, async_add_entities, build)
 
 
 class _Base(HomeWizardClimateEntity, ClimateEntity):
@@ -88,7 +96,7 @@ class _Base(HomeWizardClimateEntity, ClimateEntity):
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_target_temperature_step = 1
 
-    def __init__(self, connection, identifier: str) -> None:
+    def __init__(self, connection: HomeWizardClimateConnection, identifier: str) -> None:
         super().__init__(connection, identifier)
         self._type = connection.devices[identifier].device.type
         self._attr_unique_id = legacy_unique_id(self._type, identifier)
@@ -104,6 +112,16 @@ class _Base(HomeWizardClimateEntity, ClimateEntity):
             await self._async_set("power_on", True)
             await asyncio.sleep(MODE_CHANGE_DELAY)
 
+    async def async_set_temperature(self, **kwargs: Any) -> None:
+        # HA may send the HVAC mode in the same call: apply it first, and skip the
+        # temperature when the call switches the device off.
+        hvac_mode = kwargs.get(ATTR_HVAC_MODE)
+        if hvac_mode is not None:
+            await self.async_set_hvac_mode(hvac_mode)
+        if (temperature := kwargs.get(ATTR_TEMPERATURE)) is not None and hvac_mode != HVACMode.OFF:
+            # HA has already converted °F to °C; round, do not truncate (21.99 is 22, not 21).
+            await self._async_set("target_temperature", round(temperature))
+
     async def async_turn_on(self) -> None:
         await self._async_set("power_on", True)
 
@@ -117,7 +135,7 @@ class HomeWizardClimate(_Base):
     _attr_min_temp = 14
     _attr_max_temp = 30
 
-    def __init__(self, connection, identifier: str) -> None:
+    def __init__(self, connection: HomeWizardClimateConnection, identifier: str) -> None:
         super().__init__(connection, identifier)
         if self._type == TYPE_DEHUMIDIFIER:
             self._attr_translation_key = "dehumidifier"
@@ -200,7 +218,8 @@ class HomeWizardClimate(_Base):
         if isinstance(speed, bool) or not isinstance(speed, int) or speed < 1:
             return None
         # Heater fans: split the device's whole range in three.
-        top = HEATERFAN_HEAT_SPEED_MAX if self.hvac_mode == HVACMode.HEAT else HEATERFAN_COOL_SPEED_MAX
+        # The scale follows the heater flag, not the HVAC mode: it still applies while off.
+        top = HEATERFAN_HEAT_SPEED_MAX if self._state.get("heater") else HEATERFAN_COOL_SPEED_MAX
         if speed > top:
             return None
         third = top / 3
@@ -234,10 +253,6 @@ class HomeWizardClimate(_Base):
         if bool(self._state.get("heater")) != want_heater:
             await self._async_set("heater", want_heater)
 
-    async def async_set_temperature(self, **kwargs: Any) -> None:
-        if (temperature := kwargs.get(ATTR_TEMPERATURE)) is not None:
-            await self._async_set("target_temperature", int(temperature))
-
     async def async_set_humidity(self, humidity: int) -> None:
         await self._async_set("target_humidity", int(humidity))
 
@@ -245,7 +260,7 @@ class HomeWizardClimate(_Base):
         if self._type == TYPE_DEHUMIDIFIER:
             await self._async_set("fan_speed", _FAN_TO_TEXT[fan_mode])
             return
-        mode = HVACMode.COOL if self.hvac_mode == HVACMode.COOL else HVACMode.HEAT
+        mode = HVACMode.HEAT if self._state.get("heater") else HVACMode.COOL
         await self._async_set("fan_speed", _FAN_TO_SPEED[mode][fan_mode])
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
@@ -331,12 +346,6 @@ class HomeWizardAirConditioner(_Base):
         wanted = next(key for key, value in _AIRCO_MODES.items() if value == hvac_mode)
         if self._state.get("mode") != wanted:
             await self._async_set("mode", wanted)
-
-    async def async_set_temperature(self, **kwargs: Any) -> None:
-        if (temperature := kwargs.get(ATTR_TEMPERATURE)) is not None:
-            await self._async_set("target_temperature", int(temperature))
-        if (hvac_mode := kwargs.get("hvac_mode")) is not None:
-            await self.async_set_hvac_mode(hvac_mode)
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         await self._async_set("fan_speed", _FAN_TO_TEXT[fan_mode])

@@ -21,9 +21,12 @@ async def async_get_config_entry_diagnostics(
         "entry": async_redact_data(entry.as_dict(), TO_REDACT),
         "connected": connection.connected,
         "reconnects": connection.reconnects,
+        "next_reconnect_delay": connection.next_delay,
         "devices": [
             {
                 "type": dev.device.type,
+                "model": dev.model,
+                "version": dev.version,
                 "online": dev.online,
                 "received": dev.received,
                 "state": dev.state,

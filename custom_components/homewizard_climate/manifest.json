@@ -9,5 +9,5 @@
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/Nebur692/homewizard-climate-hass/issues",
   "requirements": [],
-  "version": "2.1.0"
+  "version": "2.2.0"
 }

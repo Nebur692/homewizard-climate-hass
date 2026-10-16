@@ -45,6 +45,8 @@ What changes:
 | Same account added twice | Allowed | Refused |
 | Dependencies | `homewizard-climate-ws` (`requests`, `websocket-client`, `dataclasses-json`) | None: Home Assistant's own aiohttp |
 | Errors you see | Generic | What happened, whether you need to act, and a Burburito code |
+| Devices added or removed in the app | Only after a reload; removed ones stay | **Picked up by themselves** within 30 minutes |
+| Changing the password | Remove and add the integration again | **Reconfigure** in the integration menu |
 
 Diagnostics download included (no credentials in it).
 
@@ -154,6 +156,8 @@ Lo que cambia:
 | La misma cuenta dos veces | Se permite | Se rechaza |
 | Dependencias | `homewizard-climate-ws` (`requests`, `websocket-client`, `dataclasses-json`) | Ninguna: el aiohttp del propio Home Assistant |
 | Los errores que ves | Genéricos | Qué ha pasado, si tienes que hacer algo y un código burburito |
+| Aparatos añadidos o quitados en la app | Solo tras recargar; los quitados se quedan | **Aparecen y desaparecen solos** en 30 minutos como mucho |
+| Cambiar la contraseña | Quitar y volver a añadir la integración | **Reconfigurar** en el menú de la integración |
 
 Incluye descarga de diagnóstico (sin credenciales).
 

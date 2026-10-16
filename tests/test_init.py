@@ -61,14 +61,14 @@ async def test_unknown_device_type_is_left_out_with_a_repair_and_the_rest_work(
     entry = make_entry(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await wait_for(lambda: hass.states.get(BEDROOM) and hass.states.get(BEDROOM).state == STATE_OFF, hass)
-    issue = ir.async_get(hass).async_get_issue(DOMAIN, "unsupported_type_aerofryer")
+    issue = ir.async_get(hass).async_get_issue(DOMAIN, f"unsupported_type_{entry.entry_id}_aerofryer")
     assert issue is not None
     assert issue.translation_placeholders["code"] == "028-001-140-103"
     # Gone once the device is gone.
     cloud.devices.pop()
     await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
-    assert ir.async_get(hass).async_get_issue(DOMAIN, "unsupported_type_aerofryer") is None
+    assert ir.async_get(hass).async_get_issue(DOMAIN, f"unsupported_type_{entry.entry_id}_aerofryer") is None
 
 
 async def test_entry_from_the_original_integration_gets_a_unique_id(hass: HomeAssistant, cloud: FakeCloud) -> None:

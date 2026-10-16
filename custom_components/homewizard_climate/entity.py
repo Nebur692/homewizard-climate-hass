@@ -2,15 +2,22 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import burburito
 from .connection import HomeWizardClimateConnection, NotConnectedError
 from .const import DOMAIN
+
+if TYPE_CHECKING:
+    from . import HomeWizardClimateConfigEntry
 
 
 class HomeWizardClimateEntity(Entity):
@@ -57,3 +64,26 @@ class HomeWizardClimateEntity(Entity):
                     **burburito.footer("mando/accionar-dispositivo/conexion-cortada", self.hass.config.language),
                 },
             ) from err
+
+
+def signal_new_devices(entry_id: str) -> str:
+    """Dispatcher signal sent with the identifiers of devices added to the account."""
+    return f"{DOMAIN}_new_devices_{entry_id}"
+
+
+@callback
+def async_setup_device_entities(
+    hass: HomeAssistant,
+    entry: HomeWizardClimateConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+    build: Callable[[str], list[Entity]],
+) -> None:
+    """Add a platform's entities for every device now, and for devices added to the account later."""
+    connection = entry.runtime_data.connection
+    async_add_entities([entity for ident in list(connection.devices) for entity in build(ident)])
+
+    @callback
+    def add_new(identifiers: list[str]) -> None:
+        async_add_entities([entity for ident in identifiers for entity in build(ident)])
+
+    entry.async_on_unload(async_dispatcher_connect(hass, signal_new_devices(entry.entry_id), add_new))

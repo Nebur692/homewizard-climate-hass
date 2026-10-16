@@ -92,3 +92,20 @@ class HomeWizardClimateConfigFlow(ConfigFlow, domain=DOMAIN):
             errors={"base": error} if error else {},
             description_placeholders={"username": entry.data[CONF_USERNAME], **self._placeholders(error)},
         )
+
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Change the password of the account without removing the integration."""
+        entry = self._get_reconfigure_entry()
+        error = None
+        if user_input is not None:
+            error = await self._async_try_login(entry.data[CONF_USERNAME], user_input[CONF_PASSWORD])
+            if error is None:
+                return self.async_update_reload_and_abort(
+                    entry, data_updates={CONF_PASSWORD: user_input[CONF_PASSWORD]}
+                )
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema({vol.Required(CONF_PASSWORD): _PASSWORD}),
+            errors={"base": error} if error else {},
+            description_placeholders={"username": entry.data[CONF_USERNAME], **self._placeholders(error)},
+        )

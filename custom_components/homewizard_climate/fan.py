@@ -7,10 +7,12 @@ from typing import Any
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util.percentage import percentage_to_ranged_value, ranged_value_to_percentage
 
 from . import HomeWizardClimateConfigEntry
+from .connection import HomeWizardClimateConnection
 from .const import (
     FAN_PRESETS,
     FAN_SPEED_RANGE,
@@ -21,21 +23,27 @@ from .const import (
     TYPE_FAN,
     TYPE_PURIFIER,
 )
-from .entity import HomeWizardClimateEntity
+from .entity import HomeWizardClimateEntity, async_setup_device_entities
 from .migration import fan_unique_id
+
+# Push entities: Home Assistant does not need to throttle their commands.
+PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: HomeWizardClimateConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant, entry: HomeWizardClimateConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
 ) -> None:
     connection = entry.runtime_data.connection
-    entities: list[FanEntity] = []
-    for ident, dev in connection.devices.items():
-        if dev.device.type == TYPE_FAN:
-            entities.append(HomeWizardFan(connection, ident))
-        elif dev.device.type == TYPE_PURIFIER:
-            entities.append(HomeWizardPurifier(connection, ident))
-    async_add_entities(entities)
+
+    def build(ident: str) -> list[Entity]:
+        kind = connection.devices[ident].device.type
+        if kind == TYPE_FAN:
+            return [HomeWizardFan(connection, ident)]
+        if kind == TYPE_PURIFIER:
+            return [HomeWizardPurifier(connection, ident)]
+        return []
+
+    async_setup_device_entities(hass, entry, async_add_entities, build)
 
 
 class _SpeedFan(HomeWizardClimateEntity, FanEntity):
@@ -45,7 +53,7 @@ class _SpeedFan(HomeWizardClimateEntity, FanEntity):
     _speed_key = "speed"
     _presets: list[str] = []
 
-    def __init__(self, connection, identifier: str) -> None:
+    def __init__(self, connection: HomeWizardClimateConnection, identifier: str) -> None:
         super().__init__(connection, identifier)
         self._attr_unique_id = fan_unique_id(identifier)
         self._attr_preset_modes = self._presets
@@ -80,6 +88,10 @@ class _SpeedFan(HomeWizardClimateEntity, FanEntity):
         return mode if mode in self._presets else None
 
     async def async_turn_on(self, percentage: int | None = None, preset_mode: str | None = None, **kwargs: Any) -> None:
+        if percentage == 0:
+            # Turning on at 0 % means off, as fan.set_percentage does.
+            await self.async_turn_off()
+            return
         if not self.is_on:
             await self._async_set("power_on", True)
         if percentage:
