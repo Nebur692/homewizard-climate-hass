@@ -36,6 +36,9 @@ class DeviceState:
     state: dict[str, Any] = field(default_factory=dict)
     online: bool = False
     received: bool = False
+    # Some devices send their hardware model (e.g. PS-A007) and firmware version in full updates.
+    model: str | None = None
+    version: str | None = None
 
 
 class HomeWizardClimateConnection:
@@ -47,10 +50,12 @@ class HomeWizardClimateConnection:
         api: HomeWizardClimateApi,
         devices: list[CloudDevice],
         on_auth_failed: Callable[[], None] | None = None,
+        on_device_info: Callable[[str], None] | None = None,
     ) -> None:
         self._session = session
         self._api = api
         self._on_auth_failed = on_auth_failed
+        self._on_device_info = on_device_info
         self.devices: dict[str, DeviceState] = {d.identifier: DeviceState(d) for d in devices}
         self._listeners: dict[str, list[Callable[[], None]]] = {}
         self._ws: aiohttp.ClientWebSocketResponse | None = None
@@ -219,6 +224,13 @@ class HomeWizardClimateConnection:
             if isinstance(state, dict):
                 dev.state = dict(state)
                 dev.received = True
+            info = (dev.model, dev.version)
+            if isinstance(message.get("model"), str):
+                dev.model = message["model"]
+            if isinstance(message.get("version"), str):
+                dev.version = message["version"]
+            if (dev.model, dev.version) != info and self._on_device_info:
+                self._on_device_info(identifier)
             if "online" in message:
                 dev.online = bool(message["online"])
             self._notify(identifier)

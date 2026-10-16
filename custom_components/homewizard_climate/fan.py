@@ -1,4 +1,4 @@
-"""Fans: a native fan entity (speed, preset, oscillation), not a climate one."""
+"""Fans and air purifiers: native fan entities (speed, preset, oscillation), not climate ones."""
 
 from __future__ import annotations
 
@@ -11,7 +11,16 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util.percentage import percentage_to_ranged_value, ranged_value_to_percentage
 
 from . import HomeWizardClimateConfigEntry
-from .const import FAN_PRESETS, FAN_SPEED_RANGE, FAN_TYPES
+from .const import (
+    FAN_PRESETS,
+    FAN_SPEED_RANGE,
+    PURIFIER_LARGE_MODEL,
+    PURIFIER_PRESETS,
+    PURIFIER_SPEED_MAX,
+    PURIFIER_SPEED_MAX_LARGE,
+    TYPE_FAN,
+    TYPE_PURIFIER,
+)
 from .entity import HomeWizardClimateEntity
 from .migration import fan_unique_id
 
@@ -20,28 +29,35 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: HomeWizardClimateConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     connection = entry.runtime_data.connection
-    async_add_entities(
-        HomeWizardFan(connection, ident) for ident, dev in connection.devices.items() if dev.device.type in FAN_TYPES
-    )
+    entities: list[FanEntity] = []
+    for ident, dev in connection.devices.items():
+        if dev.device.type == TYPE_FAN:
+            entities.append(HomeWizardFan(connection, ident))
+        elif dev.device.type == TYPE_PURIFIER:
+            entities.append(HomeWizardPurifier(connection, ident))
+    async_add_entities(entities)
 
 
-class HomeWizardFan(HomeWizardClimateEntity, FanEntity):
-    """A HomeWizard Climate fan."""
+class _SpeedFan(HomeWizardClimateEntity, FanEntity):
+    """Power, a numeric speed from 1 up and a preset; subclasses say which fields."""
 
-    _attr_supported_features = (
-        FanEntityFeature.TURN_ON
-        | FanEntityFeature.TURN_OFF
-        | FanEntityFeature.SET_SPEED
-        | FanEntityFeature.PRESET_MODE
-        | FanEntityFeature.OSCILLATE
-    )
-    _attr_preset_modes = FAN_PRESETS
-    _attr_speed_count = FAN_SPEED_RANGE[1] - FAN_SPEED_RANGE[0] + 1
-    _attr_translation_key = "fan"
+    _attr_name = None  # the device itself
+    _speed_key = "speed"
+    _presets: list[str] = []
 
     def __init__(self, connection, identifier: str) -> None:
         super().__init__(connection, identifier)
         self._attr_unique_id = fan_unique_id(identifier)
+        self._attr_preset_modes = self._presets
+
+    @property
+    def _speed_range(self) -> tuple[int, int]:
+        return FAN_SPEED_RANGE
+
+    @property
+    def speed_count(self) -> int:
+        low, high = self._speed_range
+        return high - low + 1
 
     @property
     def is_on(self) -> bool | None:
@@ -52,21 +68,16 @@ class HomeWizardFan(HomeWizardClimateEntity, FanEntity):
     def percentage(self) -> int | None:
         if not self.is_on:
             return 0
-        speed = self._state.get("speed")
+        speed = self._state.get(self._speed_key)
         if not isinstance(speed, int) or isinstance(speed, bool):
             return None
-        speed = min(max(speed, FAN_SPEED_RANGE[0]), FAN_SPEED_RANGE[1])
-        return ranged_value_to_percentage(FAN_SPEED_RANGE, speed)
+        low, high = self._speed_range
+        return ranged_value_to_percentage(self._speed_range, min(max(speed, low), high))
 
     @property
     def preset_mode(self) -> str | None:
         mode = self._state.get("mode")
-        return mode if mode in FAN_PRESETS else None
-
-    @property
-    def oscillating(self) -> bool | None:
-        value = self._state.get("oscillation")
-        return None if value is None else bool(value)
+        return mode if mode in self._presets else None
 
     async def async_turn_on(self, percentage: int | None = None, preset_mode: str | None = None, **kwargs: Any) -> None:
         if not self.is_on:
@@ -88,11 +99,46 @@ class HomeWizardFan(HomeWizardClimateEntity, FanEntity):
         await self._async_set_speed(percentage)
 
     async def _async_set_speed(self, percentage: int) -> None:
-        speed = math.ceil(percentage_to_ranged_value(FAN_SPEED_RANGE, percentage))
-        await self._async_set("speed", speed)
+        speed = math.ceil(percentage_to_ranged_value(self._speed_range, percentage))
+        await self._async_set(self._speed_key, speed)
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         await self._async_set("mode", preset_mode)
 
+
+class HomeWizardFan(_SpeedFan):
+    """A HomeWizard Climate fan: speeds 1-3, presets and oscillation."""
+
+    _attr_supported_features = (
+        FanEntityFeature.TURN_ON
+        | FanEntityFeature.TURN_OFF
+        | FanEntityFeature.SET_SPEED
+        | FanEntityFeature.PRESET_MODE
+        | FanEntityFeature.OSCILLATE
+    )
+    _attr_translation_key = "fan"
+    _presets = FAN_PRESETS
+
+    @property
+    def oscillating(self) -> bool | None:
+        value = self._state.get("oscillation")
+        return None if value is None else bool(value)
+
     async def async_oscillate(self, oscillating: bool) -> None:
         await self._async_set("oscillation", oscillating)
+
+
+class HomeWizardPurifier(_SpeedFan):
+    """An air purifier: speeds 1-3 (1-4 on the large model) and manual, auto or sleep."""
+
+    _attr_supported_features = (
+        FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF | FanEntityFeature.SET_SPEED | FanEntityFeature.PRESET_MODE
+    )
+    _attr_translation_key = "purifier"
+    _speed_key = "fan_speed"
+    _presets = PURIFIER_PRESETS
+
+    @property
+    def _speed_range(self) -> tuple[int, int]:
+        model = self._connection.devices[self._identifier].model or ""
+        return (1, PURIFIER_SPEED_MAX_LARGE if PURIFIER_LARGE_MODEL in model else PURIFIER_SPEED_MAX)

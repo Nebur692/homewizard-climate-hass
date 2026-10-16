@@ -80,17 +80,22 @@ Needs Home Assistant 2026.10 or newer.
 
 ### 🧭 Supported devices
 
-| Type in the cloud | Entity |
-|---|---|
-| `fan` | fan (3 speeds, presets normal / sleep / natural, oscillation) |
-| `heaterfan`, `airconditioner` | climate (heat / cool / off, fan speed, swing, target temperature) |
-| `heater` | climate (heat / off, eco and boost presets, target temperature) |
-| `infraredheater` | climate (heat / off, target temperature) |
-| `dehumidifier` | climate (target humidity, presets, fan speed, swing) |
+| Type in the cloud | Devices | Entities |
+|---|---|---|
+| `fan` | Smart tower fans | fan (3 speeds, presets normal / sleep / natural, oscillation) |
+| `airpurifier` | Air purifiers (HWC-6090, HWC-6089) | fan (3 speeds, 4 on the HWC-6089; presets manual / auto / sleep), sensors for air quality, PM2.5, temperature, humidity and filter life, filter problem, child lock |
+| `airconditioner` | Portable air conditioners (PS-A007, PS-A018) | climate (cool / dry / fan only / heat / off, 16-31 °C, fan low / high, plus medium on the PS-A018, swing, sleep and silent presets) |
+| `aircooler` | Air coolers | climate (fan only / cool / off, fan low / medium / high, presets manual / sleep / natural, swing) |
+| `heaterfan` | Heating and cooling towers | climate (heat / cool / off, fan speed, swing, target temperature) |
+| `heater` | Glass panel heaters | climate (heat / off, eco and boost presets, target temperature), child lock |
+| `infraredheater` | Infrared panel heaters | climate (heat / off, target temperature) |
+| `dehumidifier` | Dehumidifiers | climate (target humidity, presets, fan speed, swing), water tank full, defrosting, child lock |
 
-Fans are tested against a live account. The other types keep the behaviour of the original
-integration, now covered by tests against a simulated cloud; if yours behaves differently, open an
-issue with the diagnostics download.
+Fans are tested on a live account. Air purifiers, air conditioners and air coolers are new in 2.1:
+their fields, values and ranges come from the official HomeWizard Climate app, and they are covered
+by tests against a simulated cloud, but not yet tried on a real device. The other types keep the
+behaviour of the original integration. If yours behaves differently, open an issue with the
+diagnostics download.
 
 ### 🩹 Troubleshooting
 
@@ -184,17 +189,22 @@ Necesita Home Assistant 2026.10 o posterior.
 
 ### 🧭 Aparatos soportados
 
-| Tipo en la nube | Entidad |
-|---|---|
-| `fan` | ventilador (3 velocidades, modos normal / dormir / natural, oscilación) |
-| `heaterfan`, `airconditioner` | clima (calor / frío / apagado, velocidad, oscilación, temperatura objetivo) |
-| `heater` | clima (calor / apagado, modos eco y boost, temperatura objetivo) |
-| `infraredheater` | clima (calor / apagado, temperatura objetivo) |
-| `dehumidifier` | clima (humedad objetivo, modos, velocidad, oscilación) |
+| Tipo en la nube | Aparatos | Entidades |
+|---|---|---|
+| `fan` | Ventiladores de torre | ventilador (3 velocidades, modos normal / dormir / natural, oscilación) |
+| `airpurifier` | Purificadores de aire (HWC-6090, HWC-6089) | ventilador (3 velocidades, 4 en el HWC-6089; modos manual / automático / dormir), sensores de calidad del aire, PM2.5, temperatura, humedad y vida del filtro, aviso del filtro, bloqueo infantil |
+| `airconditioner` | Aires acondicionados portátiles (PS-A007, PS-A018) | clima (frío / seco / solo ventilador / calor / apagado, 16-31 °C, velocidad baja / alta, y media en el PS-A018, oscilación, modos dormir y silencioso) |
+| `aircooler` | Enfriadores de aire | clima (solo ventilador / frío / apagado, velocidad baja / media / alta, modos manual / dormir / natural, oscilación) |
+| `heaterfan` | Torres de calor y frío | clima (calor / frío / apagado, velocidad, oscilación, temperatura objetivo) |
+| `heater` | Estufas de panel de cristal | clima (calor / apagado, modos eco y boost, temperatura objetivo), bloqueo infantil |
+| `infraredheater` | Paneles de infrarrojos | clima (calor / apagado, temperatura objetivo) |
+| `dehumidifier` | Deshumidificadores | clima (humedad objetivo, modos, velocidad, oscilación), depósito lleno, descongelando, bloqueo infantil |
 
-Los ventiladores están probados contra una cuenta real. Los demás tipos mantienen el
-comportamiento de la integración original, ahora cubierto con pruebas contra una nube simulada; si
-el tuyo se porta distinto, abre un ticket con la descarga de diagnóstico.
+Los ventiladores están probados en una cuenta real. Los purificadores, aires acondicionados y
+enfriadores son nuevos en la 2.1: sus campos, valores y rangos salen de la app oficial HomeWizard
+Climate y están cubiertos con pruebas contra una nube simulada, pero aún no se han probado en un
+aparato de verdad. Los demás tipos mantienen el comportamiento de la integración original. Si el
+tuyo se porta distinto, abre un ticket con la descarga de diagnóstico.
 
 ### 🩹 Problemas frecuentes
 

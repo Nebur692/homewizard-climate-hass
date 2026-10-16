@@ -60,6 +60,84 @@
             }
           }
         }
+      },
+      "purifier": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "manual": "Manual",
+              "auto": "Auto",
+              "sleep": "Sleep"
+            }
+          }
+        }
+      }
+    },
+    "climate": {
+      "airconditioner": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "none": "None",
+              "sleep": "Sleep",
+              "silent": "Silent"
+            }
+          }
+        }
+      },
+      "aircooler": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "manual": "Manual",
+              "sleep": "Sleep",
+              "natural": "Natural wind"
+            }
+          }
+        }
+      },
+      "dehumidifier": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "dehumidify": "Dehumidify",
+              "fan": "Fan",
+              "laundry": "Laundry",
+              "continuous": "Continuous",
+              "automatic": "Automatic"
+            }
+          }
+        }
+      }
+    },
+    "sensor": {
+      "air_quality": {
+        "name": "Air quality",
+        "state": {
+          "excellent": "Excellent",
+          "good": "Good",
+          "bad": "Bad",
+          "polluted": "Polluted"
+        }
+      },
+      "filter_life_remaining": {
+        "name": "Filter life"
+      }
+    },
+    "binary_sensor": {
+      "filter_check": {
+        "name": "Filter"
+      },
+      "tank_full": {
+        "name": "Water tank full"
+      },
+      "defrosting": {
+        "name": "Defrosting"
+      }
+    },
+    "switch": {
+      "child_lock": {
+        "name": "Child lock"
       }
     }
   }

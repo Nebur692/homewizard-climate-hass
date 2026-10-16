@@ -57,18 +57,18 @@ async def test_wrong_password_starts_reauth_instead_of_retrying(hass: HomeAssist
 async def test_unknown_device_type_is_left_out_with_a_repair_and_the_rest_work(
     hass: HomeAssistant, cloud: FakeCloud
 ) -> None:
-    cloud.devices.append(FakeDevice("AC0000000000001", "Portable AC", "aircooler", {"power_on": False}))
+    cloud.devices.append(FakeDevice("AF0000000000001", "Air fryer", "aerofryer", {"power_on": False}))
     entry = make_entry(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await wait_for(lambda: hass.states.get(BEDROOM) and hass.states.get(BEDROOM).state == STATE_OFF, hass)
-    issue = ir.async_get(hass).async_get_issue(DOMAIN, "unsupported_type_aircooler")
+    issue = ir.async_get(hass).async_get_issue(DOMAIN, "unsupported_type_aerofryer")
     assert issue is not None
     assert issue.translation_placeholders["code"] == "028-001-140-103"
     # Gone once the device is gone.
     cloud.devices.pop()
     await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
-    assert ir.async_get(hass).async_get_issue(DOMAIN, "unsupported_type_aircooler") is None
+    assert ir.async_get(hass).async_get_issue(DOMAIN, "unsupported_type_aerofryer") is None
 
 
 async def test_entry_from_the_original_integration_gets_a_unique_id(hass: HomeAssistant, cloud: FakeCloud) -> None:

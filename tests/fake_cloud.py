@@ -34,7 +34,14 @@ HEATERFAN_STATE = {
     "mode": "normal",
     "timer": 0,
 }
-HEATER_STATE = {"power_on": False, "current_temperature": 18, "target_temperature": 21, "mode": "low", "timer": 0}
+HEATER_STATE = {
+    "power_on": False,
+    "current_temperature": 18,
+    "target_temperature": 21,
+    "mode": "low",
+    "lock": False,
+    "timer": 0,
+}
 DEHUMIDIFIER_STATE = {
     "power_on": True,
     "mode": "laundry",
@@ -42,6 +49,52 @@ DEHUMIDIFIER_STATE = {
     "target_humidity": 50,
     "fan_speed": "high",
     "swing": False,
+    "lock": False,
+    "defrosting": False,
+    "fault": [],
+    "timer": 0,
+}
+
+
+# The states below use the fields and values of the official HomeWizard Climate
+# app's models (airconditioner, aircooler, airpurifier); not captured from a device.
+AIRCONDITIONER_STATE = {
+    "power_on": False,
+    "mode": "cool",
+    "current_temperature": 27,
+    "target_temperature": 22,
+    "fan_speed": "low",
+    "oscillate": False,
+    "sleep": False,
+    "silent": False,
+    "error": [],
+    "timer": 0,
+}
+AIRCOOLER_STATE = {
+    "power_on": True,
+    "cool": False,
+    "fan_speed": "med",
+    "mode": "manual",
+    "oscillate": True,
+    "mute": False,
+    "warning": [],
+    "timer": 0,
+}
+PURIFIER_STATE = {
+    "power_on": True,
+    "mode": "auto",
+    "fan_speed": 2,
+    "air_quality": "good",
+    "pm2_5_level": 12,
+    "current_temperature": 21.5,
+    "current_humidity": 48.0,
+    "filter_life_remaining": 73,
+    "filter_check": False,
+    "lock": False,
+    "mute": False,
+    "aq_light": "full_on",
+    "night_light": "off",
+    "error": [],
     "timer": 0,
 }
 
@@ -53,6 +106,9 @@ class FakeDevice:
     type: str
     state: dict[str, Any]
     online: bool = True
+    # Some devices send these in full updates; the fans of the captured account did not.
+    model: str | None = None
+    version: str | None = None
 
 
 @dataclass
@@ -177,6 +233,8 @@ class FakeCloud:
             "state": dict(dev.state),
             "name": dev.name,
             "online": dev.online,
+            **({"model": dev.model} if dev.model else {}),
+            **({"version": dev.version} if dev.version else {}),
         }
 
     async def _apply(self, data: dict[str, Any]) -> None:

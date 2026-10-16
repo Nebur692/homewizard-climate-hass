@@ -17,18 +17,21 @@ class HomeWizardClimateEntity(Entity):
     """Pushed by the cloud; unavailable whenever the cloud or the device is not reachable."""
 
     _attr_has_entity_name = True
-    _attr_name = None
+    # Sensors and switches take their name from their description; the main entity sets None.
     _attr_should_poll = False
 
     def __init__(self, connection: HomeWizardClimateConnection, identifier: str) -> None:
         self._connection = connection
         self._identifier = identifier
-        device = connection.devices[identifier].device
+        dev = connection.devices[identifier]
+        device = dev.device
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, identifier)},
             name=device.name,
             manufacturer="HomeWizard",
             model=device.type.capitalize(),
+            model_id=dev.model,
+            sw_version=dev.version,
         )
 
     @property

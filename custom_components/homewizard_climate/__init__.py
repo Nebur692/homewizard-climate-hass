@@ -7,8 +7,9 @@ from dataclasses import dataclass
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import Event, HomeAssistant
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -20,7 +21,7 @@ from .migration import async_migrate_fans, async_track_old_references
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.CLIMATE, Platform.FAN]
+PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.CLIMATE, Platform.FAN, Platform.SENSOR, Platform.SWITCH]
 UNSUPPORTED_ISSUE_PREFIX = "unsupported_type_"
 
 
@@ -62,8 +63,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeWizardClimateConfigE
     _async_report_unsupported(hass, [d.type for d in devices if d.type not in SUPPORTED_TYPES])
     supported = [d for d in devices if d.type in SUPPORTED_TYPES]
 
+    @callback
+    def update_device_info(identifier: str) -> None:
+        """Show the hardware model and firmware version on the device page once the cloud sends them."""
+        dev = entry.runtime_data.connection.devices[identifier]
+        dev_reg = dr.async_get(hass)
+        if device := dev_reg.async_get_device_by_identifier((DOMAIN, identifier), entry.entry_id):
+            dev_reg.async_update_device(device.id, model_id=dev.model, sw_version=dev.version)
+
     connection = HomeWizardClimateConnection(
-        session, api, supported, on_auth_failed=lambda: entry.async_start_reauth(hass)
+        session,
+        api,
+        supported,
+        on_auth_failed=lambda: entry.async_start_reauth(hass),
+        on_device_info=update_device_info,
     )
     entry.runtime_data = HomeWizardClimateData(api, connection)
 

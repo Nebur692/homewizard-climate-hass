@@ -60,6 +60,84 @@
             }
           }
         }
+      },
+      "purifier": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "manual": "Manual",
+              "auto": "Automático",
+              "sleep": "Dormir"
+            }
+          }
+        }
+      }
+    },
+    "climate": {
+      "airconditioner": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "none": "Ninguno",
+              "sleep": "Dormir",
+              "silent": "Silencioso"
+            }
+          }
+        }
+      },
+      "aircooler": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "manual": "Manual",
+              "sleep": "Dormir",
+              "natural": "Viento natural"
+            }
+          }
+        }
+      },
+      "dehumidifier": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "dehumidify": "Deshumidificar",
+              "fan": "Ventilador",
+              "laundry": "Ropa",
+              "continuous": "Continuo",
+              "automatic": "Automático"
+            }
+          }
+        }
+      }
+    },
+    "sensor": {
+      "air_quality": {
+        "name": "Calidad del aire",
+        "state": {
+          "excellent": "Excelente",
+          "good": "Buena",
+          "bad": "Mala",
+          "polluted": "Contaminada"
+        }
+      },
+      "filter_life_remaining": {
+        "name": "Vida del filtro"
+      }
+    },
+    "binary_sensor": {
+      "filter_check": {
+        "name": "Filtro"
+      },
+      "tank_full": {
+        "name": "Depósito lleno"
+      },
+      "defrosting": {
+        "name": "Descongelando"
+      }
+    },
+    "switch": {
+      "child_lock": {
+        "name": "Bloqueo infantil"
       }
     }
   }
