@@ -1,0 +1,66 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cuenta de HomeWizard Climate",
+        "description": "El correo y la contraseña que usas en la app HomeWizard Climate.",
+        "data": {
+          "username": "Correo",
+          "password": "Contraseña"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Vuelve a entrar en HomeWizard Climate",
+        "description": "HomeWizard ya no acepta la contraseña de {username}. Escribe la que usas ahora en la app.",
+        "data": {
+          "password": "Contraseña"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "HomeWizard no ha aceptado ese correo o esa contraseña.\n\n{joke}\nCódigo burburito: {code}",
+      "cannot_connect": "No se llega a la nube de HomeWizard. Comprueba que Home Assistant tiene internet y vuelve a intentarlo en un minuto.\n\n{joke}\nCódigo burburito: {code}",
+      "unknown": "La nube de HomeWizard ha contestado algo inesperado. Vuelve a intentarlo; el detalle está en el registro de Home Assistant.\n\n{joke}\nCódigo burburito: {code}"
+    },
+    "abort": {
+      "already_configured": "Esta cuenta ya está añadida.",
+      "reauth_successful": "Has vuelto a entrar."
+    }
+  },
+  "exceptions": {
+    "not_connected": {
+      "message": "{name} no ha recibido la orden: la conexión con la nube de HomeWizard está caída y reconectando. Vuelve a intentarlo en unos segundos. {joke} Código burburito: {code}"
+    },
+    "cannot_connect": {
+      "message": "La nube de HomeWizard no contesta ({error}). Home Assistant lo reintentará solo. {joke} Código burburito: {code}"
+    },
+    "invalid_auth": {
+      "message": "HomeWizard ya no acepta la contraseña guardada."
+    }
+  },
+  "issues": {
+    "unsupported_type": {
+      "title": "Aparato de HomeWizard de tipo «{type}» no soportado",
+      "description": "Tu cuenta de HomeWizard tiene un aparato de tipo «{type}» que esta integración todavía no conoce, así que se queda fuera. Los demás funcionan con normalidad.\n\n¿Tienes que hacer algo? Solo si quieres que se soporte: abre un ticket con el tipo en {url}.\n\n{joke}\nCódigo burburito: {code}"
+    },
+    "fan_migrated": {
+      "title": "{old} ahora es {new}",
+      "description": "Los ventiladores son ahora entidades de ventilador en vez de clima, así que {old} ha pasado a ser {new}. Se han conservado su nombre, su área y lo que tenías configurado para los asistentes de voz, pero estas automatizaciones o scripts siguen usando la entidad vieja:\n\n{users}\n\n¿Tienes que hacer algo? Sí: cambia en ellas {old} por {new}. «climate.set_hvac_mode» con «off» pasa a ser «fan.turn_off», y con «fan_only», «fan.turn_on». Este aviso se quita solo cuando ya nada usa la entidad vieja.\n\n{joke}\nCódigo burburito: {code}"
+    }
+  },
+  "entity": {
+    "fan": {
+      "fan": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "normal": "Normal",
+              "sleep": "Dormir",
+              "natural": "Viento natural"
+            }
+          }
+        }
+      }
+    }
+  }
+}

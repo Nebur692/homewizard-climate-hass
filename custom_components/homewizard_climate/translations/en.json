@@ -1,0 +1,66 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HomeWizard Climate account",
+        "description": "The email and password you use in the HomeWizard Climate app.",
+        "data": {
+          "username": "Email",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Sign in to HomeWizard Climate again",
+        "description": "HomeWizard no longer accepts the password of {username}. Type the one you use in the app now.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "HomeWizard did not accept that email or password.\n\n{joke}\nBurburito code: {code}",
+      "cannot_connect": "Could not reach the HomeWizard cloud. Check that Home Assistant has internet and try again in a minute.\n\n{joke}\nBurburito code: {code}",
+      "unknown": "The HomeWizard cloud answered something unexpected. Try again; the details are in the Home Assistant log.\n\n{joke}\nBurburito code: {code}"
+    },
+    "abort": {
+      "already_configured": "This account is already added.",
+      "reauth_successful": "Signed in again."
+    }
+  },
+  "exceptions": {
+    "not_connected": {
+      "message": "{name} did not get the command: the connection with the HomeWizard cloud is down and reconnecting. Try again in a few seconds. {joke} Burburito code: {code}"
+    },
+    "cannot_connect": {
+      "message": "The HomeWizard cloud is not answering ({error}). Home Assistant will retry on its own. {joke} Burburito code: {code}"
+    },
+    "invalid_auth": {
+      "message": "HomeWizard no longer accepts the saved password."
+    }
+  },
+  "issues": {
+    "unsupported_type": {
+      "title": "HomeWizard device of type \"{type}\" not supported",
+      "description": "Your HomeWizard account has a device of type \"{type}\" that this integration does not know yet, so it is left out. The rest work normally.\n\nDo you need to act? Only if you want it supported: open an issue with the type at {url}.\n\n{joke}\nBurburito code: {code}"
+    },
+    "fan_migrated": {
+      "title": "{old} is now {new}",
+      "description": "Fans are now fan entities instead of climate entities, so {old} became {new}. Its name, area and voice assistant settings came along, but these automations or scripts still use the old entity:\n\n{users}\n\nDo you need to act? Yes: change {old} to {new} in them. \"climate.set_hvac_mode\" with \"off\" becomes \"fan.turn_off\", and \"fan_only\" becomes \"fan.turn_on\". This notice goes away by itself when nothing uses the old entity.\n\n{joke}\nBurburito code: {code}"
+    }
+  },
+  "entity": {
+    "fan": {
+      "fan": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "normal": "Normal",
+              "sleep": "Sleep",
+              "natural": "Natural wind"
+            }
+          }
+        }
+      }
+    }
+  }
+}

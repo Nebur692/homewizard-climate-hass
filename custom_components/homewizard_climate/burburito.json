@@ -1,0 +1,115 @@
+{
+  "proyecto": {
+    "id": 28,
+    "slug": "homewizard-climate",
+    "nombre": "HomeWizard Climate, el fork de la integración HACS de los ventiladores y estufas Princess de la nube de HomeWizard",
+    "repo": "https://github.com/Nebur692/homewizard-climate-hass",
+    "fuente": "/mnt/cache/ESXI/docker/apps/homewizard-climate-hass/custom_components/homewizard_climate/burburito.json"
+  },
+  "modulos": [
+    {
+      "id": 1,
+      "slug": "conexion",
+      "nombre": "La conexión con la nube",
+      "descripcion": "El arranque de la entrada (__init__.py): inicio de sesión y lista de aparatos por la API REST (api.py), y el websocket que recibe los cambios y manda las órdenes (connection.py)."
+    },
+    {
+      "id": 2,
+      "slug": "configuracion",
+      "nombre": "La configuración",
+      "descripcion": "El asistente para añadir la cuenta y el de volver a escribir la contraseña (config_flow.py)."
+    },
+    {
+      "id": 3,
+      "slug": "mando",
+      "nombre": "Las órdenes",
+      "descripcion": "Encender, apagar y cambiar velocidad, modo, oscilación o temperatura desde las entidades (fan.py, climate.py)."
+    },
+    {
+      "id": 4,
+      "slug": "migracion",
+      "nombre": "El paso de clima a ventilador",
+      "descripcion": "Al actualizar, los ventiladores dejan de ser entidades climate y pasan a fan; el aviso de Reparaciones con las automatizaciones y scripts que siguen usando la entidad vieja (migration.py)."
+    }
+  ],
+  "acciones": [],
+  "codigos": [
+    {
+      "modulo": "configuracion",
+      "accion": "iniciar-sesion",
+      "causa": "credencial-invalida",
+      "severidad": "aviso",
+      "actuar": true,
+      "titulo": "HomeWizard no acepta el usuario o la contraseña",
+      "explicacion": "La API de HomeWizard contestó 401/403 o no devolvió token al iniciar sesión desde el asistente.",
+      "que_hacer": "Comprobar el correo y la contraseña de la app HomeWizard Climate y volver a intentarlo.",
+      "origen": "custom_components/homewizard_climate/config_flow.py"
+    },
+    {
+      "modulo": "configuracion",
+      "accion": "iniciar-sesion",
+      "causa": "sin-conexion",
+      "severidad": "error",
+      "actuar": true,
+      "titulo": "No se llega a la nube de HomeWizard desde el asistente",
+      "explicacion": "El inicio de sesión no contestó en 15 segundos, falló la red o la nube devolvió un error de servidor.",
+      "que_hacer": "Comprobar que Home Assistant tiene internet y volver a intentarlo en un minuto.",
+      "origen": "custom_components/homewizard_climate/config_flow.py"
+    },
+    {
+      "modulo": "configuracion",
+      "accion": "iniciar-sesion",
+      "causa": "respuesta-ilegible",
+      "severidad": "error",
+      "actuar": true,
+      "titulo": "La nube de HomeWizard contestó algo inesperado",
+      "explicacion": "Un fallo que el asistente no esperaba; el detalle va al registro de Home Assistant.",
+      "que_hacer": "Volver a intentarlo; si se repite, abrir un ticket con el registro.",
+      "origen": "custom_components/homewizard_climate/config_flow.py"
+    },
+    {
+      "modulo": "conexion",
+      "accion": "arrancar-servicio",
+      "causa": "sin-conexion",
+      "severidad": "aviso",
+      "actuar": false,
+      "titulo": "La nube de HomeWizard no contesta al arrancar",
+      "explicacion": "El inicio de sesión o la lista de aparatos fallaron por red o tiempo; Home Assistant lo reintenta solo.",
+      "que_hacer": "Nada: se reintenta sola. Si dura horas, mirar la conexión a internet.",
+      "origen": "custom_components/homewizard_climate/__init__.py"
+    },
+    {
+      "modulo": "conexion",
+      "accion": "arrancar-servicio",
+      "causa": "no-implementado",
+      "severidad": "aviso",
+      "actuar": false,
+      "titulo": "Aparato de un tipo que la integración no conoce",
+      "explicacion": "La cuenta tiene un aparato cuyo tipo no está soportado; se deja fuera sin tumbar a los demás.",
+      "que_hacer": "Abrir un ticket con el tipo que sale en el aviso para que se pueda añadir.",
+      "origen": "custom_components/homewizard_climate/__init__.py"
+    },
+    {
+      "modulo": "mando",
+      "accion": "accionar-dispositivo",
+      "causa": "conexion-cortada",
+      "severidad": "aviso",
+      "actuar": false,
+      "titulo": "La orden no sale: no hay conexión con la nube",
+      "explicacion": "El websocket con HomeWizard está caído o reconectando cuando se manda la orden.",
+      "que_hacer": "Esperar unos segundos a que reconecte y repetirla.",
+      "origen": "custom_components/homewizard_climate/entity.py"
+    },
+    {
+      "modulo": "migracion",
+      "accion": "desplegar",
+      "causa": "no-encontrado",
+      "severidad": "aviso",
+      "actuar": true,
+      "titulo": "Automatizaciones que usan el ventilador viejo de clima",
+      "explicacion": "Tras actualizar, el ventilador es una entidad fan y la climate antigua ya no existe; estas automatizaciones o scripts la siguen nombrando.",
+      "que_hacer": "Cambiar en ellas la entidad climate por la nueva fan (climate.set_hvac_mode off pasa a fan.turn_off).",
+      "origen": "custom_components/homewizard_climate/migration.py"
+    }
+  ]
+}

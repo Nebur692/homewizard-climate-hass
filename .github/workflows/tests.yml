@@ -1,0 +1,23 @@
+name: Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    # Weekly, so a new release of an action or a dependency that breaks shows up here first.
+    - cron: "41 5 * * 1"
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - run: pip install -r requirements_test.txt
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: python -m pytest -q

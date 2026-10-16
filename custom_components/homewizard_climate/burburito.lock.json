@@ -1,0 +1,157 @@
+{
+  "generado": "2026-10-16T08:24:58Z",
+  "aviso": "Generado por bin/burburito. No editar a mano: la fuente de verdad es el burburito.json de al lado.",
+  "proyecto": {
+    "id": 28,
+    "slug": "homewizard-climate",
+    "nombre": "HomeWizard Climate, el fork de la integración HACS de los ventiladores y estufas Princess de la nube de HomeWizard"
+  },
+  "codigos": {
+    "conexion/arrancar-servicio/sin-conexion": {
+      "codigo": "028-001-140-001",
+      "severidad": "aviso",
+      "actuar": false,
+      "titulo": "La nube de HomeWizard no contesta al arrancar"
+    },
+    "conexion/arrancar-servicio/no-implementado": {
+      "codigo": "028-001-140-103",
+      "severidad": "aviso",
+      "actuar": false,
+      "titulo": "Aparato de un tipo que la integración no conoce"
+    },
+    "configuracion/iniciar-sesion/sin-conexion": {
+      "codigo": "028-002-001-001",
+      "severidad": "error",
+      "actuar": true,
+      "titulo": "No se llega a la nube de HomeWizard desde el asistente"
+    },
+    "configuracion/iniciar-sesion/respuesta-ilegible": {
+      "codigo": "028-002-001-022",
+      "severidad": "error",
+      "actuar": true,
+      "titulo": "La nube de HomeWizard contestó algo inesperado"
+    },
+    "configuracion/iniciar-sesion/credencial-invalida": {
+      "codigo": "028-002-001-041",
+      "severidad": "aviso",
+      "actuar": true,
+      "titulo": "HomeWizard no acepta el usuario o la contraseña"
+    },
+    "mando/accionar-dispositivo/conexion-cortada": {
+      "codigo": "028-003-080-005",
+      "severidad": "aviso",
+      "actuar": false,
+      "titulo": "La orden no sale: no hay conexión con la nube"
+    },
+    "migracion/desplegar/no-encontrado": {
+      "codigo": "028-004-141-062",
+      "severidad": "aviso",
+      "actuar": true,
+      "titulo": "Automatizaciones que usan el ventilador viejo de clima"
+    }
+  },
+  "frases": {
+    "aviso": [
+      {
+        "es": "Nada grave, pero el burburito ha chisporroteado un poco.",
+        "en": "Nothing serious, but the burburito sizzled a little."
+      },
+      {
+        "es": "Un burburito de nada, de los que se apagan solos.",
+        "en": "A tiny burburito, the kind that puts itself out."
+      },
+      {
+        "es": "El burburito ha saltado de la sartén, pero no ha llegado al suelo.",
+        "en": "The burburito jumped out of the pan, but it never hit the floor."
+      },
+      {
+        "es": "Aquí ha habido un burburito pequeñito, del tamaño de una lenteja.",
+        "en": "There was a tiny burburito here, about the size of a lentil."
+      },
+      {
+        "es": "Se ha frito un burburito, pero la cocina sigue entera.",
+        "en": "One burburito got fried, but the kitchen is still standing."
+      },
+      {
+        "es": "Ojo, que el aceite del burburito empieza a hacer ruido.",
+        "en": "Heads up: the oil around the burburito is starting to make noises."
+      },
+      {
+        "es": "Un burburito se ha despistado; ya vuelve solo a su sitio.",
+        "en": "A burburito wandered off; it is already finding its way back."
+      },
+      {
+        "es": "Burburito en modo siesta: esto no ha salido, pero tampoco corre prisa.",
+        "en": "Burburito on nap mode: this did not work out, and it is not urgent either."
+      }
+    ],
+    "error": [
+      {
+        "es": "Se nos ha frito un burburito con todo el equipo puesto.",
+        "en": "A burburito went down in flames, gear and all."
+      },
+      {
+        "es": "El burburito ha salido ardiendo de la sartén y se ha llevado la receta.",
+        "en": "The burburito flew out of the pan in flames and took the recipe with it."
+      },
+      {
+        "es": "Aquí huele a burburito quemado.",
+        "en": "It smells of burnt burburito around here."
+      },
+      {
+        "es": "El burburito ha dicho hasta aquí y ha soltado la espumadera.",
+        "en": "The burburito called it a day and dropped the skimmer."
+      },
+      {
+        "es": "Un burburito se ha atragantado con esto.",
+        "en": "A burburito choked on this one."
+      },
+      {
+        "es": "El burburito se ha quedado mirando la pantalla sin saber qué hacer.",
+        "en": "The burburito just stared at the screen, out of ideas."
+      },
+      {
+        "es": "Sartén al fuego, burburito por los aires.",
+        "en": "Pan on the fire, burburito in the air."
+      },
+      {
+        "es": "Nos ha estallado un burburito en plena faena.",
+        "en": "A burburito blew up on us right in the middle of the job."
+      },
+      {
+        "es": "El burburito ha tropezado y se ha llevado el plato por delante.",
+        "en": "The burburito tripped and took the whole plate down with it."
+      },
+      {
+        "es": "Madre mía, menudo burburito ha pegado esto. Algo se ha quemado en las cocinas de Burbujalandia.",
+        "en": "Oh my, what a burburito this thing just pulled. Something got burnt in the kitchens of Burbujalandia."
+      }
+    ],
+    "catastrofe": [
+      {
+        "es": "Burburito nivel incendio: la cocina entera está en llamas.",
+        "en": "Burburito at fire-alarm level: the whole kitchen is ablaze."
+      },
+      {
+        "es": "Se han quemado todos los burburitos a la vez.",
+        "en": "Every last burburito burnt at once."
+      },
+      {
+        "es": "Esto ya no es un burburito, esto es una freidora entera ardiendo.",
+        "en": "This is no mere burburito, this is an entire deep fryer on fire."
+      },
+      {
+        "es": "Burburito catastrófico: hasta las gafas de sol se han derretido.",
+        "en": "Catastrophic burburito: even the sunglasses melted."
+      },
+      {
+        "es": "El burburito ha desalojado la cocina y ha llamado a los bomberos.",
+        "en": "The burburito evacuated the kitchen and called the fire brigade."
+      },
+      {
+        "es": "Ha pasado por aquí un burburito de los gordos y se ha llevado el servicio por delante.",
+        "en": "A really big burburito came through and took the whole service with it."
+      }
+    ]
+  }
+}

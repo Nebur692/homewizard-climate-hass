@@ -1,0 +1,20 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "BLE", "SLF"]
+# S311: random only picks the joke of an error footer, never anything secret.
+# S105: CONF_PASSWORD and "token" are field names, not passwords.
+ignore = ["S101", "S311", "S105"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106", "SLF001"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components"]

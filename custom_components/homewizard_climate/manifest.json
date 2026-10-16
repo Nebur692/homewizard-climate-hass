@@ -1,10 +1,13 @@
 {
   "domain": "homewizard_climate",
-  "name": "Homewizard Climate",
+  "name": "HomeWizard Climate",
+  "after_dependencies": ["automation", "script"],
+  "codeowners": ["@Nebur692"],
   "config_flow": true,
-  "documentation": "https://www.home-assistant.io/integrations/homewizard_climate",
-  "requirements": ["homewizard-climate-ws==0.0.26"],
-  "codeowners": ["@mepla", "@dennis1804"],
-  "version": "1.0.8",
-  "iot_class": "cloud_push"
+  "documentation": "https://github.com/Nebur692/homewizard-climate-hass",
+  "integration_type": "hub",
+  "iot_class": "cloud_push",
+  "issue_tracker": "https://github.com/Nebur692/homewizard-climate-hass/issues",
+  "requirements": [],
+  "version": "2.0.0"
 }

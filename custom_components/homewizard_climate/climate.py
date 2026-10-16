@@ -1,170 +1,81 @@
-"""Climate platform for homewizard_climate."""
-import logging
-import time
+"""Heaters, IR panels, dehumidifiers and air conditioners: climate entities.
 
-from homewizard_climate_ws.model.climate_device_state import (
-    HomeWizardClimateDeviceState,
-)
-from homewizard_climate_ws.model.climate_device import (
-    HomeWizardClimateDeviceType,
-)
+Same behaviour and unique ids as the original integration, so existing entity
+ids do not change, minus its crashes: no property raises NotImplementedError,
+values the device does not report come out as unknown, and each command sends
+one valid patch.
+"""
 
-from homewizard_climate_ws.ws.hw_websocket import HomeWizardClimateWebSocket
+from __future__ import annotations
+
+import asyncio
+from typing import Any
 
 from homeassistant.components.climate import (
     FAN_HIGH,
     FAN_LOW,
     FAN_MEDIUM,
-    FAN_OFF,
-    FAN_ON,
     PRESET_BOOST,
     PRESET_ECO,
     SWING_HORIZONTAL,
-    SWING_ON,
     SWING_OFF,
+    SWING_ON,
     ClimateEntity,
     ClimateEntityFeature,
-    PRESET_COMFORT,
-    PRESET_SLEEP,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from . import HomeWizardClimateConfigEntry
+from .const import (
+    CLIMATE_TYPES,
+    TYPE_DEHUMIDIFIER,
+    TYPE_HEATER,
+    TYPE_INFRAREDHEATER,
+    legacy_unique_id,
+)
+from .entity import HomeWizardClimateEntity
+
+# Seconds between power on and a mode change: the device ignores one sent straight after.
+MODE_CHANGE_DELAY = 1
+DEHUMIDIFIER_PRESETS = ["dehumidify", "fan", "laundry", "continuous", "automatic"]
+# Dehumidifiers report their fan speed as text.
+_TEXT_TO_FAN = {"low": FAN_LOW, "med": FAN_MEDIUM, "high": FAN_HIGH}
+_FAN_TO_TEXT = {FAN_LOW: "low", FAN_MEDIUM: "med", FAN_HIGH: "high"}
+# Heater fans use numbers, and the numbers depend on heating or cooling.
+_FAN_TO_SPEED = {
+    HVACMode.HEAT: {FAN_LOW: 1, FAN_MEDIUM: 2, FAN_HIGH: 4},
+    HVACMode.COOL: {FAN_LOW: 1, FAN_MEDIUM: 4, FAN_HIGH: 8},
+}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant, entry: HomeWizardClimateConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    """Create entries for each device in Homewizard cloud."""
-    websockets = hass.data[DOMAIN][entry.entry_id]["websockets"]
-    entities = [HomeWizardClimateEntity(ws, hass) for ws in websockets]
-    async_add_entities(entities)
+    connection = entry.runtime_data.connection
+    async_add_entities(
+        HomeWizardClimate(connection, ident)
+        for ident, dev in connection.devices.items()
+        if dev.device.type in CLIMATE_TYPES
+    )
 
 
-class HomeWizardClimateEntity(ClimateEntity):
-    """Climate entity for a given device in Homewizard cloud."""
+class HomeWizardClimate(HomeWizardClimateEntity, ClimateEntity):
+    """A HomeWizard Climate heater, IR panel, dehumidifier or air conditioner."""
 
-    def __init__(
-        self, device_web_socket: HomeWizardClimateWebSocket, hass: HomeAssistant
-    ) -> None:
-        """Initialize the device and identifiers."""
-        self._device_web_socket = device_web_socket
-        self._device_web_socket.set_on_state_change(self.on_device_state_change)
-        self._hass = hass
-        self._isIR = False
-        self._isFAN = False
-        self._isHEATER = False
-        self._isDEHUMID = False
-        self._isAIRCOOLER = False
-        self._logger = logging.getLogger(
-            f"{__name__}.{self._device_web_socket.device.identifier}"
-        )
-        if self._device_web_socket.device.type == HomeWizardClimateDeviceType.INFRAREDHEATER:
-            self._isIR = True
-        if self._device_web_socket.device.type == HomeWizardClimateDeviceType.FAN:
-            self._isFAN = True
-        if self._device_web_socket.device.type == HomeWizardClimateDeviceType.HEATER:
-            self._isHEATER = True
-        if self._device_web_socket.device.type == HomeWizardClimateDeviceType.DEHUMIDIFIER:
-            self._isDEHUMID = True
-#       doesn't seem to work with ["homewizard-climate-ws==0.0.26"],.
-#        if self._device_web_socket.device.type == HomeWizardClimateDeviceType.AIRCOOLER:
-#            self._isAIRCOOLER = True
-        
-        # see, https://developers.home-assistant.io/blog/2024/01/24/climate-climateentityfeatures-expanded
-        self._enable_turn_on_off_backwards_compatibility = False
+    _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_target_temperature_step = 1
+    _attr_min_temp = 14
+    _attr_max_temp = 30
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device specific attributes."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self._device_web_socket.device.identifier)},
-            name=self.name,
-        )
-
-    @property
-    def unique_id(self) -> str:
-        """Return unique ID for this device."""
-        return f"{self._device_web_socket.device.type}_{self._device_web_socket.device.identifier}"
-
-    @property
-    def name(self) -> str:
-        """Return the name of the climate device."""
-        return self._device_web_socket.device.name
-
-    @property
-    def current_temperature(self) -> int:
-        """Return the current temperature."""
-        if self._isAIRCOOLER or self._isFAN:
-            return None
-        return self._device_web_socket.last_state.current_temperature
-
-    @property
-    def current_humidity(self) -> int:
-        """Return the current temperature."""
-        if self._isAIRCOOLER or self._isFAN:
-            return None
-        return self._device_web_socket.last_state.current_humidity
-
-    @property
-    def fan_mode(self):
-        """Return fan mode of the AC this group belongs to."""
-        if self._isFAN:
-            if self._device_web_socket.last_state.speed == 1:
-                return FAN_LOW
-            if self._device_web_socket.last_state.speed == 2:
-                return FAN_MEDIUM
-            if self._device_web_socket.last_state.speed == 3:
-                return FAN_HIGH
-        if self._device_web_socket.last_state.fan_speed == 'low':
-            return FAN_LOW
-        if self._device_web_socket.last_state.fan_speed == 'med':
-            return FAN_MEDIUM
-        if self._device_web_socket.last_state.fan_speed == 'high':
-            return FAN_HIGH
-
-    @property
-    def fan_modes(self):
-        """Return the list of available fan modes."""
-        if self._isDEHUMID:
-            return [FAN_LOW, FAN_HIGH]
-        if self._isFAN or self._isAIRCOOLER:
-            return [FAN_LOW, FAN_MEDIUM, FAN_HIGH]
-        return [FAN_ON, FAN_OFF, FAN_LOW, FAN_MEDIUM, FAN_HIGH]
-
-    @property
-    def preset_mode(self):
-        """Return preset mode."""
-        if self._isDEHUMID or self._isAIRCOOLER or self._isFAN:
-            return self._device_web_socket.last_state.mode
-        if self._isHEATER:
-            mode = self._device_web_socket.last_state.mode
-            if mode == "low":
-                return PRESET_ECO
-            elif mode == "high":
-                return PRESET_BOOST
-        raise NotImplementedError()
-
-    @property
-    def preset_modes(self):
-        if self._isDEHUMID:
-            return ['dehumidify', 'fan', 'laundry', 'continuous', 'automatic']
-        if self._isAIRCOOLER:
-            return ['manual', PRESET_SLEEP, 'natural']
-        if self._isFAN:
-            return ['normal', PRESET_SLEEP, 'natural']
-        if self._isHEATER:
-            return [PRESET_ECO, PRESET_BOOST]
-
-    @property
-    def supported_features(self) -> ClimateEntityFeature:
-        if self._isDEHUMID:
-            return (
+    def __init__(self, connection, identifier: str) -> None:
+        super().__init__(connection, identifier)
+        self._type = connection.devices[identifier].device.type
+        self._attr_unique_id = legacy_unique_id(self._type, identifier)
+        if self._type == TYPE_DEHUMIDIFIER:
+            self._attr_supported_features = (
                 ClimateEntityFeature.TARGET_HUMIDITY
                 | ClimateEntityFeature.PRESET_MODE
                 | ClimateEntityFeature.FAN_MODE
@@ -172,280 +83,150 @@ class HomeWizardClimateEntity(ClimateEntity):
                 | ClimateEntityFeature.TURN_OFF
                 | ClimateEntityFeature.TURN_ON
             )
-        if self._isIR:
-            return (
-                ClimateEntityFeature.TARGET_TEMPERATURE
-                | ClimateEntityFeature.TURN_OFF
-                | ClimateEntityFeature.TURN_ON
+            self._attr_hvac_modes = [HVACMode.FAN_ONLY, HVACMode.OFF]
+            self._attr_preset_modes = DEHUMIDIFIER_PRESETS
+            self._attr_fan_modes = [FAN_LOW, FAN_HIGH]
+            self._attr_swing_modes = [SWING_ON, SWING_OFF]
+        elif self._type == TYPE_INFRAREDHEATER:
+            self._attr_supported_features = (
+                ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON
             )
-        if self._isHEATER:
-            return (
+            self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
+        elif self._type == TYPE_HEATER:
+            self._attr_supported_features = (
                 ClimateEntityFeature.TARGET_TEMPERATURE
                 | ClimateEntityFeature.PRESET_MODE
                 | ClimateEntityFeature.TURN_OFF
                 | ClimateEntityFeature.TURN_ON
             )
-        if self._isFAN or self._isAIRCOOLER:
-            return (
-                ClimateEntityFeature.FAN_MODE
+            self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
+            self._attr_preset_modes = [PRESET_ECO, PRESET_BOOST]
+        else:  # heater fan, air conditioner
+            self._attr_supported_features = (
+                ClimateEntityFeature.TARGET_TEMPERATURE
+                | ClimateEntityFeature.FAN_MODE
                 | ClimateEntityFeature.SWING_MODE
-                | ClimateEntityFeature.PRESET_MODE
                 | ClimateEntityFeature.TURN_OFF
                 | ClimateEntityFeature.TURN_ON
             )
-        """Return the list of supported features."""
-        return (
-            ClimateEntityFeature.TARGET_TEMPERATURE
-            | ClimateEntityFeature.FAN_MODE
-            | ClimateEntityFeature.SWING_MODE
-            | ClimateEntityFeature.TURN_OFF
-            | ClimateEntityFeature.TURN_ON
-        )
+            self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
+            self._attr_fan_modes = [FAN_LOW, FAN_MEDIUM, FAN_HIGH]
+            self._attr_swing_modes = [SWING_HORIZONTAL, SWING_OFF]
+
+    # ---- state -----------------------------------------------------------
+
+    def _number(self, key: str) -> float | None:
+        value = self._state.get(key)
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            return None
+        return value
 
     @property
-    def swing_modes(self) -> list[str]:
-        if self._isDEHUMID:
-            return [SWING_ON, SWING_OFF]
-        """Return all possible swing modes."""
-        return [SWING_HORIZONTAL, SWING_OFF]
+    def current_temperature(self) -> float | None:
+        return self._number("current_temperature")
 
     @property
-    def swing_mode(self) -> str:
-        """Return current swing mode."""
-
-        if self._isDEHUMID:
-            return (
-                SWING_ON
-                if self._device_web_socket.last_state.swing
-                else SWING_OFF
-            )
-        if self._isFAN:
-            return (
-                SWING_HORIZONTAL
-                if self._device_web_socket.last_state.oscillation
-                else SWING_OFF
-            )
-
-        return (
-            SWING_HORIZONTAL
-            if self._device_web_socket.last_state.oscillate
-            else SWING_OFF
-        )
+    def current_humidity(self) -> float | None:
+        return self._number("current_humidity")
 
     @property
-    def hvac_mode(self):
-        if self._isIR or self._isHEATER:
-            if self._device_web_socket.last_state.power_on:
-                return HVACMode.HEAT
+    def target_temperature(self) -> float | None:
+        if self._type == TYPE_DEHUMIDIFIER:
+            return None
+        return self._number("target_temperature")
+
+    @property
+    def target_humidity(self) -> float | None:
+        if self._type != TYPE_DEHUMIDIFIER:
+            return None
+        return self._number("target_humidity")
+
+    @property
+    def hvac_mode(self) -> HVACMode | None:
+        power = self._state.get("power_on")
+        if power is None:
+            return None
+        if not power:
             return HVACMode.OFF
-        if self._isAIRCOOLER:
-            if self._device_web_socket.last_state.power_on:
-                if self._device_web_socket.last_state.cool:
-                    return HVACMode.COOL
-                return HVACMode.FAN_ONLY
-            return HVACMode.OFF
-        if self._isFAN or self._isDEHUMID:
-            if self._device_web_socket.last_state.power_on:
-                return HVACMode.FAN_ONLY
-        """Return hvac target hvac state."""
-        if self._device_web_socket.last_state.power_on:
-            result = (
-                HVACMode.HEAT
-                if self._device_web_socket.last_state.heater
-                else HVACMode.COOL
-            )
-        else:
-            result = HVACMode.OFF
-
-        return result
+        if self._type in (TYPE_INFRAREDHEATER, TYPE_HEATER):
+            return HVACMode.HEAT
+        if self._type == TYPE_DEHUMIDIFIER:
+            return HVACMode.FAN_ONLY
+        return HVACMode.HEAT if self._state.get("heater") else HVACMode.COOL
 
     @property
-    def hvac_modes(self):
-        if self._isIR or self._isHEATER:
-            return [HVACMode.HEAT, HVACMode.OFF]
-        if self._isFAN or self._isDEHUMID:
-            return [HVACMode.FAN_ONLY, HVACMode.OFF]
-        if self._isAIRCOOLER:
-            return [HVACMode.COOL, HVACMode.FAN_ONLY, HVACMode.OFF]
-        """Return the list of available operation modes."""
-        return [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
+    def fan_mode(self) -> str | None:
+        speed = self._state.get("fan_speed")
+        if isinstance(speed, str):
+            return _TEXT_TO_FAN.get(speed)
+        mode = self.hvac_mode
+        if mode in _FAN_TO_SPEED:
+            for name, value in _FAN_TO_SPEED[mode].items():
+                if speed == value:
+                    return name
+        return None
 
     @property
-    def temperature_unit(self):
-        """Return the current temperature unit."""
-        return UnitOfTemperature.CELSIUS
+    def preset_mode(self) -> str | None:
+        mode = self._state.get("mode")
+        if self._type == TYPE_DEHUMIDIFIER:
+            return mode if mode in DEHUMIDIFIER_PRESETS else None
+        if self._type == TYPE_HEATER:
+            return {"low": PRESET_ECO, "high": PRESET_BOOST}.get(mode)
+        return None
 
     @property
-    def target_temperature_step(self) -> float:
-        """Return the current target_temperature_step."""
-        return 1
+    def swing_mode(self) -> str | None:
+        if self._type == TYPE_DEHUMIDIFIER:
+            value = self._state.get("swing")
+            return None if value is None else (SWING_ON if value else SWING_OFF)
+        value = self._state.get("oscillate")
+        return None if value is None else (SWING_HORIZONTAL if value else SWING_OFF)
 
-    @property
-    def target_temperature_high(self) -> float:
-        """Return the highest possible target temperature."""
-        return 30
+    # ---- commands --------------------------------------------------------
 
-    @property
-    def target_temperature_low(self) -> float:
-        """Return the lowest possible target temperature."""
-        return 14
+    async def async_turn_on(self) -> None:
+        await self._async_set("power_on", True)
 
-    @property
-    def min_temp(self) -> float:
-        """Return the minimum possible temperature."""
-        return self.target_temperature_low
+    async def async_turn_off(self) -> None:
+        await self._async_set("power_on", False)
 
-    @property
-    def max_temp(self) -> float:
-        """Return the maximum possible temperature."""
-        return self.target_temperature_high
-
-    @property
-    def target_humidity(self) -> float:
-        """Return the current target temperature."""
-        if self._isDEHUMID:
-            return self._device_web_socket.last_state.target_humidity
-        raise NotImplementedError()
-
-    def set_humidity(self, target_humidity) -> None:
-        """Set the current target humidity."""
-        if self._isDEHUMID:
-            return self._device_web_socket.set_target_humidity(
-                int(target_humidity)
-            )
-        raise NotImplementedError()
-
-    @property
-    def target_temperature(self) -> float:
-        """Return the current target temperature."""
-        if self._isDEHUMID or self._isAIRCOOLER or self._isFAN:
-            raise NotImplementedError()
-        return self._device_web_socket.last_state.target_temperature
-
-    def set_temperature(self, **kwargs) -> None:
-        """Set the current target temperature."""
-        if self._isDEHUMID or self._isAIRCOOLER or self._isFAN:
-            raise NotImplementedError()
-        self._device_web_socket.set_target_temperature(
-            int(kwargs.get(ATTR_TEMPERATURE, "0"))
-        )
-
-    def set_fan_mode(self, fan_mode: str) -> None:
-        if self._isIR or self._isHEATER:
-            raise NotImplementedError()
-        if self._isAIRCOOLER or self._isDEHUMID:
-            if fan_mode == FAN_MEDIUM:
-                self._device_web_socket.set_fan_speed('med')
-            return self._device_web_socket.set_fan_speed(fan_mode)       
-        if self._isFAN:
-            if fan_mode == FAN_ON:
-                self._device_web_socket.turn_on()
-            elif fan_mode == FAN_OFF:
-                self._device_web_socket.turn_off()
-            elif fan_mode == FAN_LOW:
-                self._device_web_socket.set_speed(1)
-            elif fan_mode == FAN_MEDIUM:
-                self._device_web_socket.set_speed(2)
-            elif fan_mode == FAN_HIGH:
-                self._device_web_socket.set_speed(3)
+    async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
+        if hvac_mode == HVACMode.OFF:
+            await self._async_set("power_on", False)
             return
-        """Set fan mode."""
-        if fan_mode == FAN_ON:
-            self._device_web_socket.turn_on()
-        elif fan_mode == FAN_OFF:
-            self._device_web_socket.turn_off()
-        elif fan_mode == FAN_LOW:
-            self._device_web_socket.set_fan_speed(1)
-        elif fan_mode == FAN_MEDIUM:
-            speed = 4 if self.hvac_mode == HVACMode.COOL else 2
-            self._device_web_socket.set_fan_speed(speed)
-        elif fan_mode == FAN_HIGH:
-            speed = 8 if self.hvac_mode == HVACMode.COOL else 4
-            self._device_web_socket.set_fan_speed(speed)
+        if not self._state.get("power_on"):
+            await self._async_set("power_on", True)
+            # The device ignores a mode change that arrives right on the heels of power on.
+            await asyncio.sleep(MODE_CHANGE_DELAY)
+        if self._type in (TYPE_INFRAREDHEATER, TYPE_HEATER, TYPE_DEHUMIDIFIER):
+            return
+        want_heater = hvac_mode == HVACMode.HEAT
+        if bool(self._state.get("heater")) != want_heater:
+            await self._async_set("heater", want_heater)
 
-    def set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        """Set HVAC mode."""
-        if self._isAIRCOOLER:
-            if hvac_mode == HVACMode.OFF:
-                self._device_web_socket.turn_off()
-            if hvac_mode != HVACMode.OFF:
-                self._device_web_socket.turn_on()
-                if hvac_mode == HVACMode.FAN_ONLY:
-                    self._device_web_socket.turn_off_cool()  
-                if hvac_mode == HVACMode.COOL:
-                    self._device_web_socket.turn_on_cool()   
-        if hvac_mode == HVACMode.HEAT:
-            if not self._device_web_socket.last_state.power_on:
-                self._device_web_socket.turn_on()
-                time.sleep(1)
-            if not self._device_web_socket.last_state.heater:
-                self._device_web_socket.turn_on_heater()
-        elif hvac_mode == HVACMode.OFF:
-            self._device_web_socket.turn_off()
+    async def async_set_temperature(self, **kwargs: Any) -> None:
+        if (temperature := kwargs.get(ATTR_TEMPERATURE)) is not None:
+            await self._async_set("target_temperature", int(temperature))
+
+    async def async_set_humidity(self, humidity: int) -> None:
+        await self._async_set("target_humidity", int(humidity))
+
+    async def async_set_fan_mode(self, fan_mode: str) -> None:
+        if self._type == TYPE_DEHUMIDIFIER:
+            await self._async_set("fan_speed", _FAN_TO_TEXT[fan_mode])
+            return
+        mode = HVACMode.COOL if self.hvac_mode == HVACMode.COOL else HVACMode.HEAT
+        await self._async_set("fan_speed", _FAN_TO_SPEED[mode][fan_mode])
+
+    async def async_set_swing_mode(self, swing_mode: str) -> None:
+        if self._type == TYPE_DEHUMIDIFIER:
+            await self._async_set("swing", swing_mode == SWING_ON)
         else:
-            if not self._device_web_socket.last_state.power_on:
-                self._device_web_socket.turn_on()
-                time.sleep(1)
-            if self._device_web_socket.last_state.heater:
-                self._device_web_socket.turn_on_cooler()
+            await self._async_set("oscillate", swing_mode == SWING_HORIZONTAL)
 
-    def turn_on(self) -> None:
-        """Turn on."""
-        self._device_web_socket.turn_on()
-
-    def turn_off(self) -> None:
-        """Turn off."""
-        self._device_web_socket.turn_off()
-
-    def set_swing_mode(self, swing_mode: str) -> None:
-        """Set swing mode."""
-        if self._isDEHUMID:
-            if swing_mode == SWING_ON:
-                self._device_web_socket.set_swing('true')
-            else:
-                self._device_web_socket.set_swing('false')
-
-        if swing_mode == SWING_HORIZONTAL:
-            self._device_web_socket.turn_on_oscillation()
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
+        if self._type == TYPE_HEATER:
+            await self._async_set("mode", {PRESET_ECO: "low", PRESET_BOOST: "high"}[preset_mode])
         else:
-            self._device_web_socket.turn_off_oscillation()
-
-    def set_preset_mode(self, preset_mode: str) -> None:
-        """Set preset mode."""
-        if self._isFAN or self._isAIRCOOLER:
-            if preset_mode == PRESET_ECO or preset_mode == 'natural':
-                self._device_web_socket.set_mode('natural')
-            elif preset_mode == PRESET_SLEEP:
-                self._device_web_socket.set_mode('sleep')
-            elif preset_mode == PRESET_COMFORT or preset_mode == 'normal':
-                self._device_web_socket.set_mode('normal')
-            elif preset_mode == 'manual':
-                self._device_web_socket.set_mode('manual')
-        elif self._isHEATER:
-            if preset_mode == PRESET_ECO:
-                self._device_web_socket.set_mode("low")
-            elif preset_mode == PRESET_BOOST:
-                self._device_web_socket.set_mode("high")
-        elif self._isDEHUMID:
-            self._device_web_socket.set_mode(preset_mode)
-        else:
-            raise NotImplementedError()
-
-    def turn_aux_heat_on(self) -> None:
-        """Not implemented."""
-        raise NotImplementedError()
-
-    def turn_aux_heat_off(self) -> None:
-        """Not implemented."""
-        raise NotImplementedError()
-
-    # def set_humidity(self, humidity: int) -> None:
-    #     """Not implemented."""
-    #     raise NotImplementedError()
-
-    def on_device_state_change(
-        self, state: HomeWizardClimateDeviceState, diff: str
-    ) -> None:
-        """Get called when any update is pushed through the websocket server andupdates HA state."""
-        self._logger.debug("State updated, diff: %s", diff)
-        self._hass.add_job(self.async_write_ha_state)
+            await self._async_set("mode", preset_mode)
