@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="custom_components/homewizard_climate/brand/icon.png" width="96" alt="">
+
 # homewizard-climate-hass
 
 *HomeWizard Climate fans, heaters and dehumidifiers in Home Assistant — pushed live from the cloud, back on their own after any outage*
