@@ -266,3 +266,20 @@ async def test_heater_fan_reads_every_speed(
         hass,
     )
     assert hass.states.get("climate.heater_fan").attributes[ATTR_FAN_MODE] == expected
+
+
+async def test_no_deprecated_home_assistant_api_is_used(
+    hass: HomeAssistant, cloud: FakeCloud, caplog: pytest.LogCaptureFixture
+) -> None:
+    # HA logs a warning when an integration touches a deprecated constant or helper;
+    # with every platform loaded there must be none (CONCENTRATION_* slipped into 2.1).
+    cloud.devices = [
+        FakeDevice(PURIFIER_ID, "Big purifier", "airpurifier", copy.deepcopy(PURIFIER_STATE), model="HWC-6089"),
+        FakeDevice("DH0000000000001", "Dehumidifier", "dehumidifier", copy.deepcopy(DEHUMIDIFIER_STATE)),
+        FakeDevice(AC_ID, "Princess AC", "airconditioner", copy.deepcopy(AIRCONDITIONER_STATE)),
+    ]
+    entry = make_entry(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await wait_for(lambda: hass.states.get(PURIFIER) and hass.states.get(PURIFIER).state != STATE_UNAVAILABLE, hass)
+    deprecated = [r.getMessage() for r in caplog.records if "deprecated" in r.getMessage().lower()]
+    assert deprecated == []
