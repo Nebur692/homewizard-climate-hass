@@ -4,7 +4,7 @@
 
 # homewizard-climate-hass
 
-*HomeWizard Climate fans, heaters and dehumidifiers in Home Assistant — pushed live from the cloud, back on their own after any outage*
+*Princess smart fans, heaters, air conditioners and dehumidifiers (HomeWizard Climate app) in Home Assistant — pushed live from the cloud, back on their own after any outage*
 
 ![Release](https://img.shields.io/github/v/release/Nebur692/homewizard-climate-hass?label=release&color=blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -72,8 +72,8 @@ itself:
 
 1. HACS → ⋮ → **Custom repositories** → `https://github.com/Nebur692/homewizard-climate-hass`,
    type **Integration**.
-2. Install **HomeWizard Climate** and restart Home Assistant.
-3. **Settings → Devices & services → Add integration → HomeWizard Climate**, with the email and
+2. Install **HomeWizard Climate (Princess)** and restart Home Assistant.
+3. **Settings → Devices & services → Add integration → HomeWizard Climate (Princess)**, with the email and
    password of the HomeWizard Climate app.
 
 Needs Home Assistant 2026.10 or newer.
@@ -176,8 +176,8 @@ aviso en **Ajustes → Reparaciones** te dice cuáles; cuando las cambies, se qu
 
 1. HACS → ⋮ → **Repositorios personalizados** → `https://github.com/Nebur692/homewizard-climate-hass`,
    tipo **Integración**.
-2. Instala **HomeWizard Climate** y reinicia Home Assistant.
-3. **Ajustes → Dispositivos y servicios → Añadir integración → HomeWizard Climate**, con el correo y
+2. Instala **HomeWizard Climate (Princess)** y reinicia Home Assistant.
+3. **Ajustes → Dispositivos y servicios → Añadir integración → HomeWizard Climate (Princess)**, con el correo y
    la contraseña de la app HomeWizard Climate.
 
 Necesita Home Assistant 2026.10 o posterior.

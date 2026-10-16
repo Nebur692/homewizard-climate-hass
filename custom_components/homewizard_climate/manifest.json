@@ -1,6 +1,6 @@
 {
   "domain": "homewizard_climate",
-  "name": "HomeWizard Climate",
+  "name": "HomeWizard Climate (Princess)",
   "after_dependencies": ["automation", "script"],
   "codeowners": ["@Nebur692"],
   "config_flow": true,
